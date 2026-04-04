@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Vanilla Cake - Unbound</title>
+    <style>
+        /* --- Base Layout --- */
+        body {
+            background-color: #fdf5e6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            transition: background-color 1.5s ease;
+        }
+
+        /* Fade Overlay */
+        #fadeOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fceef5;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 1.5s ease;
+        }
+
+        /* Message after fade */
+        #letterAlert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #e07090;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 10000;
+            display: none;
+            text-align: center;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        /* --- UI Controls (Top Left) --- */
+        .ui-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .icon-btn {
+            width: 50px;
+            height: 50px;
+            background: white;
+            border: 2px solid #e0d5c1;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.2s;
+            padding: 0;
+            overflow: hidden;
+        }
+        .icon-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+        .icon-btn:hover { transform: scale(1.1); background: #fffaf0; }
+        .icon-btn.active { border-color: #ff5252; background: #fff0f0; }
+
+        /* --- Panels --- */
+        .panel {
+            position: fixed;
+            background: white;
+            border: 2px solid #e0d5c1;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 999;
+        }
+
+        /* Inventory */
+        #inventory {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            flex-direction: row;
+            gap: 15px;
+            overflow-x: auto;
+            white-space: nowrap;
+            justify-content: flex-start;
+            padding: 10px 20px;
+            scrollbar-width: thin;
+            align-items: center;
+        }
+        #inventory::-webkit-scrollbar { height: 6px; }
+        #inventory::-webkit-scrollbar-thumb { background: #e0d5c1; border-radius: 10px; }
+
+        /* Custom URL Input */
+        .custom-link-box {
+            display: inline-flex;
+            gap: 5px;
+            padding: 5px;
+            background: #fdf5e6;
+            border-radius: 10px;
+            margin-left: 10px;
+            border: 1px dashed #8d6e63;
+        }
+        .custom-link-box input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 120px;
+            font-size: 12px;
+        }
+        .custom-link-box button {
+            padding: 5px 10px;
+            background: #8d6e63;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        /* Layer Panel */
+        #layerPanel {
+            top: 150px;
+            left: 20px;
+            width: 200px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .inv-item {
+            font-size: 35px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 12px;
+            transition: 0.2s;
+            border: 2px solid transparent;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 55px;
+            height: 55px;
+        }
+        .inv-item img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .inv-item:hover { background: #fdf5e6; }
+        .inv-item.selected { border-color: #ff5252; background: #fff0f0; }
+
+        .layer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        .layer-item .layer-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            border-radius: 4px;
+            vertical-align: middle;
+        }
+        .layer-item button { cursor: pointer; border: none; background: #ff5252; color: white; border-radius: 5px; padding: 4px 8px; font-size: 12px; }
+
+        .btn-clear-all {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: #ff7043;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-clear-all:hover { background: #e64a19; }
+
+        /* --- Cake Structure --- */
+        .cake {
+            position: relative;
+            width: 250px;
+            height: 200px;
+            cursor: crosshair;
+            transition: transform 0.1s ease-out;
+        }
+        .cake.wobble {
+            animation: cakeWobble 0.4s ease-out;
+        }
+        @keyframes cakeWobble {
+            0%   { transform: rotate(0deg) scale(1); }
+            20%  { transform: rotate(-3deg) scale(1.02); }
+            40%  { transform: rotate(3deg) scale(1.03); }
+            60%  { transform: rotate(-2deg) scale(1.02); }
+            80%  { transform: rotate(1deg) scale(1.01); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        .plate {
+            width: 270px; height: 110px;
+            position: absolute; bottom: -10px; left: -10px;
+            background-color: #fff; border-radius: 50%;
+            box-shadow: 0 2px 0 #eee, 0 4px 0 #eee, 0 5px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .layer {
+            position: absolute; width: 250px; height: 100px; border-radius: 50%;
+            background-color: #FEE5E0;
+            box-shadow: 0 2px 0px #E8ABB5, 0 4px 0px #FFBFC5, 0 6px 0px #FFBFC5, 0 8px 0px #FFBFC5, 0 10px 0px #FFBFC5, 0 12px 0px #FFBFC5, 0 14px 0px #FFBFC5, 0 16px 0px #FFBFC5, 0 18px 0px #FFBFC5, 0 20px 0px #FFBFC5, 0 22px 0px #FFBFC5, 0 24px 0px #FFBFC5, 0 26px 0px #FFBFC5, 0 28px 0px #E6C2BF;
+        }
+        .layer-top { top: 0px; }
+        .layer-middle { top: 33px; }
+        .layer-bottom { top: 66px; }
+
+        .icing {
+            position: absolute; top: 2px; left: 5px;
+            background-color: #fffaf0;
+            width: 240px; height: 90px;
+            border-radius: 50%; z-index: 2; pointer-events: none;
+        }
+        .icing:before {
+            content: ""; position: absolute; top: 4px; right: 5px; bottom: 6px; left: 5px;
+            background-color: #ffffff; border-radius: 50%; z-index: 1;
+            box-shadow: 0 0 4px #fffcf5;
+        }
+
+        .drip {
+            position: absolute; width: 50px; height: 60px;
+            background-color: #fffaf0; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px;
+            z-index: 1; transform-origin: top;
+            animation: drip-move 2s ease-in-out infinite alternate;
+        }
+        @keyframes drip-move { 0% { transform: scaleY(1); } 100% { transform: scaleY(1.1); } }
+        .drip1 { top: 53px; left: 5px; transform: skewY(15deg); height: 48px; width: 40px; }
+        .drip2 { top: 69px; left: 181px; transform: skewY(-15deg); animation-delay: 0.5s; }
+        .drip3 { top: 54px; left: 90px; width: 80px; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; animation-delay: 1s; }
+
+        /* --- Items --- */
+        .candle {
+            position: absolute; background-color: #64b5f6;
+            width: 12px; height: 35px;
+            border-radius: 6px/3px; z-index: 10; transform: translate(-50%, -50%);
+        }
+        .candle:before {
+            content: ""; position: absolute; top: 0; left: 0; width: 12px; height: 6px;
+            border-radius: 50%; background-color: #42a5f5;
+        }
+        .flame {
+            position: absolute; background-color: orange; width: 10px; height: 25px;
+            border-radius: 8px 8px 8px 8px/20px 20px 8px 8px; top: -28px; left: 50%;
+            margin-left: -5px; z-index: 11;
+            box-shadow: 0 0 15px rgba(255, 165, 0, 0.6), 0 0 40px rgba(255, 165, 0, 0.4);
+            transform-origin: 50% 90%; animation: flicker 0.8s ease-in-out alternate infinite;
+        }
+        @keyframes flicker { 0% { transform: skewX(5deg) scale(1); } 100% { transform: skewX(-5deg) scale(1.1); } }
+
+        .candle.out .flame { display: none; }
+        .smoke {
+            position: absolute; top: -30px; left: 50%; width: 4px; height: 15px;
+            background: rgba(100,100,100,0.2); filter: blur(2px); border-radius: 50%;
+            opacity: 0; pointer-events: none;
+        }
+        .candle.out .smoke { animation: rise 1.5s ease-out forwards; }
+        @keyframes rise { 0% { opacity: 0.6; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-100%, -50px) scale(3); } }
+
+        .decoration {
+            position: absolute; transform: translate(-50%, -50%); z-index: 5;
+            pointer-events: none; user-select: none;
+        }
+        .decoration img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* --- Footer UI --- */
+        #micStatus { margin-top: 130px; color: #8d6e63; font-size: 14px; text-align: center; }
+        .btn-start {
+            margin-top: 15px; padding: 12px 25px; background: #64b5f6; color: white;
+            border: none; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        .btn-start:hover { background: #2196f3; transform: scale(1.05); }
+
+        #birthdayMsg {
+            position: fixed; 
+            top: 40%; 
+            font-size: 60px; 
+            font-weight: 900; 
+            color: #ff5252;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.2); 
+            pointer-events: none; 
+            display: none; 
+            z-index: 2000;
+            text-align: center; 
+            width: 100%;
+            /* เปลี่ยนเป็นฟอนต์ลายมือตัวหนา */
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="fadeOverlay"></div>
+    <div id="letterAlert">✉️ มีคนอยากส่งจดหมายถึงคุณ...</div>
+
+    <div class="ui-controls">
+        <button class="icon-btn" id="toggleInv" title="คลังไอเทม">
+            <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20352_20260331120438.png" alt="คลังไอเทม">
+        </button>
+        <button class="icon-btn" id="toggleLayers" title="จัดการเลเยอร์">
+            <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20352_20260331120433.png" alt="จัดการเลเยอร์">
+        </button>
+    </div>
+
+    <div id="inventory" class="panel">
+        <div id="baseInventory" style="display: inline-flex; gap: 15px;">
+            <div class="inv-item" data-type="candle">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E2%80%94Pngtree%E2%80%94candle_4970961.png" alt="เทียน">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331192809.png" data-label="สตรอว์เบอร์รี่">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331192809.png" alt="🍓">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331193352.png" data-label="เชอร์รี่">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331193352.png" alt="🍒">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331180636.png" data-label="ช็อกโกแลต">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331180636.png" alt="🍫">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195316.png" data-label="คุกกี้">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195316.png" alt="🍪">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195442.png" data-label="เค้กชิ้น">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195442.png" alt="🍰">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195527.png" data-label="ดาว">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260331195527.png" alt="⭐">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260330164741.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20350_20260330164741.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/m71p8cmtjm3itjcd305mrgctgd.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/m71p8cmtjm3itjcd305mrgctgd.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Papyrus_overworld.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Papyrus_overworld.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Frisk2.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Frisk2.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Chara_Sprite.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Chara_Sprite.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISFJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISFJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISTJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISTJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESTJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESTJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESFJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESFJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENFP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENFP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INFP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INFP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INFJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INFJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENFJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENFJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INTP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INTP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INTJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/INTJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENTJ.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENTJ.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENTP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ENTP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESFP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESFP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESTP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ESTP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISFP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISFP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISTP.png" data-label="หัวใจ">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/ISTP.png" alt="💖">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20351_20260330203858.png" data-label="รุ้ง">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD%20351_20260330203858.png" alt="🌈">
+            </div>
+            <div class="inv-item" data-type="decoration" data-img="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E2%80%94Pngtree%E2%80%94cute%20chick_6998692.png" data-label="ตุ๊กตา">
+                <img src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E2%80%94Pngtree%E2%80%94cute%20chick_6998692.png" alt="🧸">
+            </div>
+        </div>
+        <div class="custom-link-box">
+            <input type="text" id="customUrlInput" placeholder="ใส่ URL รูปที่ต้องการ...">
+            <button id="addCustomBtn">เพิ่ม</button>
+        </div>
+    </div>
+
+    <div id="layerPanel" class="panel">
+        <h4 style="margin: 0 0 10px 0; border-bottom: 2px solid #fdf5e6; padding-bottom: 5px;">จัดการเลเยอร์</h4>
+        <div id="layerList"></div>
+        <button class="btn-clear-all" id="clearAllBtn">🗑️ ลบทั้งหมด</button>
+    </div>
+
+    <div class="cake">
+        <div class="plate"></div>
+        <div class="layer layer-bottom"></div>
+        <div class="layer layer-middle"></div>
+        <div class="layer layer-top"></div>
+        <div class="icing"></div>
+        <div class="drip drip1"></div>
+        <div class="drip drip2"></div>
+        <div class="drip drip3"></div>
+        <div id="objectsContainer"></div>
+    </div>
+
+    <div id="micStatus">เลือกท็อปปิ้งจากกล่องเค้ก แล้วจิ้มบนเค้กได้เลยนะะ! 🎂</div>
+    <button class="btn-start" id="enableMic">เริ่มเป่าเทียน</button>
+    <div id="birthdayMsg">HAPPY BIRTHDAY!</div>
+
+    <audio id="bgMusic" preload="auto">
+        <source src="https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/Happy%20Birthday%20Song%20x%20Oiia%20Cat%20%20Maxwell%20Cat.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="cheerMusic" preload="auto">
+        <source src="https://cdn.jsdelivr.net/gh/Film1579/Mbti@main/cheer.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const cake = document.querySelector(".cake");
+            const objectsContainer = document.getElementById("objectsContainer");
+            const micBtn = document.getElementById("enableMic");
+            const micStatus = document.getElementById("micStatus");
+            const invItemsContainer = document.getElementById("baseInventory");
+            const layerList = document.getElementById("layerList");
+            const birthdayMsg = document.getElementById("birthdayMsg");
+            const clearAllBtn = document.getElementById("clearAllBtn");
+            const bgMusic = document.getElementById("bgMusic");
+            const cheerMusic = document.getElementById("cheerMusic");
+            const fadeOverlay = document.getElementById("fadeOverlay");
+            const letterAlert = document.getElementById("letterAlert");
+
+            // Custom link elements
+            const customUrlInput = document.getElementById("customUrlInput");
+            const addCustomBtn = document.getElementById("addCustomBtn");
+
+            let candles = [];
+            let decorations = [];
+            let selectedType = "candle";
+            let selectedImg = "";
+            let selectedLabel = "";
+            let audioContext, analyser, dataArray;
+            let isPartyMode = false;
+            let micReady = false;
+            const MAX_CONFETTI = 30;
+            const nextPageURL = "https://film1579.github.io/Note-/"; // แก้ไขลิงก์หน้าถัดไปที่นี่
+
+            // --- UI Handlers ---
+            function setupToggle(btnId, panelId) {
+                document.getElementById(btnId).addEventListener("click", function() {
+                    const panel = document.getElementById(panelId);
+                    const isOpen = panel.style.display === "flex" || panel.style.display === "block";
+                    panel.style.display = isOpen ? "none" : (panelId === "inventory" ? "flex" : "block");
+                    this.classList.toggle("active");
+                });
+            }
+            setupToggle("toggleInv", "inventory");
+            setupToggle("toggleLayers", "layerPanel");
+
+            // Function to handle item selection
+            function bindItemEvents(item) {
+                item.addEventListener("click", () => {
+                    document.querySelectorAll(".inv-item").forEach(i => i.classList.remove("selected"));
+                    item.classList.add("selected");
+                    selectedType = item.dataset.type;
+                    selectedImg = item.dataset.img || "";
+                    selectedLabel = item.dataset.label || "เทียน";
+                });
+            }
+
+            // Bind initial items
+            document.querySelectorAll(".inv-item").forEach(bindItemEvents);
+
+            // Add Custom Topping via URL
+            addCustomBtn.addEventListener("click", () => {
+                const url = customUrlInput.value.trim();
+                if (url) {
+                    const newItem = document.createElement("div");
+                    newItem.className = "inv-item";
+                    newItem.dataset.type = "decoration";
+                    newItem.dataset.img = url;
+                    newItem.dataset.label = "ท็อปปิ้งกำหนดเอง";
+                    newItem.innerHTML = `<img src="${url}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1048/1048953.png'">`;
+                    invItemsContainer.appendChild(newItem);
+                    bindItemEvents(newItem);
+                    customUrlInput.value = "";
+                    // Select it automatically
+                    newItem.click();
+                }
+            });
+
+            // Clear all button
+            clearAllBtn.addEventListener("click", () => {
+                [...candles, ...decorations].forEach(el => el.remove());
+                candles = [];
+                decorations = [];
+                updateLayerUI();
+            });
+
+            function updateLayerUI() {
+                layerList.innerHTML = "";
+                const allObjects = [...candles, ...decorations].reverse();
+                allObjects.forEach((obj, index) => {
+                    const div = document.createElement("div");
+                    div.className = "layer-item";
+                    const isCandle = obj.classList.contains('candle');
+                    const imgSrc = isCandle
+                        ? "https://cdn.jsdelivr.net/gh/Film1579/Sound-1@main/%E2%80%94Pngtree%E2%80%94candle_4970961.png"
+                        : (obj.dataset.imgSrc || "");
+                    div.innerHTML = `
+                        <span>
+                            <img class="layer-icon" src="${imgSrc}" alt="icon">
+                            ที่ ${allObjects.length - index}
+                        </span>
+                        <button onclick="removeObject(${index})">ลบ</button>
+                    `;
+                    layerList.appendChild(div);
+                });
+            }
+
+            window.removeObject = (idx) => {
+                const allObjects = [...candles, ...decorations].reverse();
+                const target = allObjects[idx];
+                target.remove();
+                candles = candles.filter(c => c !== target);
+                decorations = decorations.filter(d => d !== target);
+                updateLayerUI();
+            };
+
+            // --- Placement ---
+            cake.addEventListener("click", function (e) {
+                const rect = cake.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (y > 95 || y < 10) return;
+
+                if (selectedType === "candle") {
+                    const candle = document.createElement("div");
+                    candle.className = "candle";
+                    candle.style.left = `${x}px`;
+                    candle.style.top = `${y}px`;
+                    candle.style.zIndex = Math.floor(y) + 10;
+                    candle.innerHTML = `<div class="flame"></div><div class="smoke"></div>`;
+                    objectsContainer.appendChild(candle);
+                    candles.push(candle);
+                } else {
+                    const deco = document.createElement("div");
+                    deco.className = "decoration";
+                    deco.style.left = `${x}px`;
+                    deco.style.top = `${y}px`;
+                    deco.style.zIndex = Math.floor(y) + 5;
+                    deco.dataset.imgSrc = selectedImg;
+                    const img = document.createElement("img");
+                    img.src = selectedImg;
+                    img.alt = selectedLabel;
+                    deco.appendChild(img);
+                    objectsContainer.appendChild(deco);
+                    decorations.push(deco);
+                }
+                updateLayerUI();
+            });
+
+            // --- Mic System ---
+            async function setupMic() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    analyser.fftSize = 256;
+                    source.connect(analyser);
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    
+                    micBtn.style.display = 'none';
+                    micStatus.innerHTML = "🎵 เปิดเพลงวันเกิดให้น้าา!";
+
+                    // Play MP3 music (No Loop)
+                    bgMusic.loop = false;
+                    bgMusic.play();
+
+                    // Wait for music to end before enabling mic
+                    bgMusic.onended = () => {
+                        micReady = true;
+                        micStatus.innerHTML = "ลองเป่าใส่เค้กดูสิครับบ! 🌬️";
+                        detectBlow();
+                    };
+
+                } catch (err) {
+                    alert("เข้าถึงไมค์ไม่ได้จ้า: " + err);
+                }
+            }
+
+            function detectBlow() {
+                if (!micReady) return;
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                let average = sum / dataArray.length;
+
+                if (average > 125) {
+                    const strength = Math.max(0, Math.min(1, (average - 125) / 125)); 
+                    blowOut(strength);
+
+                    if (average > 125) {
+                        cake.classList.remove('wobble');
+                        void cake.offsetWidth; // reflow
+                        cake.classList.add('wobble');
+                        cake.addEventListener('animationend', () => cake.classList.remove('wobble'), { once: true });
+                    }
+                }
+                requestAnimationFrame(detectBlow);
+            }
+
+            function blowOut(strength) {
+                const activeCandles = candles.filter(c => !c.classList.contains("out"));
+                if (activeCandles.length === 0) return;
+
+                const countToBlow = Math.max(1, Math.round(strength * activeCandles.length));
+                let blown = 0;
+
+                for (let i = 0; i < activeCandles.length && blown < countToBlow; i++) {
+                    activeCandles[i].classList.add("out");
+                    blown++;
+                }
+
+                if (blown > 0) createConfetti(Math.min(blown + 2, 6));
+
+                const remaining = candles.filter(c => !c.classList.contains("out")).length;
+                if (candles.length > 0 && remaining === 0 && !isPartyMode) {
+                    triggerBirthday();
+                }
+            }
+
+            // --- Celebration & Redirect ---
+            function triggerBirthday() {
+                isPartyMode = true;
+                birthdayMsg.style.display = "block";
+                
+                // เล่นเสียงแสดงความยินดี
+                cheerMusic.play();
+
+                // Start confetti
+                const end = Date.now() + 5000;
+                let lastFrame = 0;
+                const frameInterval = 200; 
+
+                (function frame(now) {
+                    if (now - lastFrame > frameInterval) {
+                        createConfetti(4);
+                        lastFrame = now;
+                    }
+                    if (Date.now() < end) {
+                        requestAnimationFrame(frame);
+                    } else {
+                        // Phase 2: Fade out and Redirect
+                        startFadeOut();
+                    }
+                }(0));
+            }
+
+            function startFadeOut() {
+                fadeOverlay.style.opacity = "1";
+                fadeOverlay.style.pointerEvents = "all";
+                
+                setTimeout(() => {
+                    // แสดงข้อความจดหมาย
+                    letterAlert.style.display = "block";
+                    
+                    // หน่วงเวลาให้คนอ่านข้อความก่อนเปลี่ยนหน้า
+                    setTimeout(() => {
+                        window.location.href = nextPageURL;
+                    }, 2500); // แสดงข้อความเป็นเวลา 2.5 วินาที
+                }, 1500); // รอให้เฟดดำเสร็จสิ้นก่อน
+            }
+
+            const confettiSymbols = ["🎉", "✨", "❤️", "🎈", "💖", "🌟"];
+
+            function createConfetti(count) {
+                const current = document.querySelectorAll('.confetti-piece').length;
+                if (current >= MAX_CONFETTI) return;
+                const allowed = Math.min(count, MAX_CONFETTI - current);
+
+                for (let i = 0; i < allowed; i++) {
+                    const conf = document.createElement("div");
+                    conf.className = "confetti-piece";
+                    conf.style.position = "fixed";
+                    conf.style.left = Math.random() * 100 + "vw";
+                    conf.style.top = "-20px";
+                    conf.style.fontSize = (Math.random() * 16 + 18) + "px";
+                    conf.style.pointerEvents = "none";
+                    conf.style.zIndex = "2000";
+                    conf.style.willChange = "transform";
+                    conf.textContent = confettiSymbols[Math.floor(Math.random() * confettiSymbols.length)];
+                    document.body.appendChild(conf);
+
+                    let y = 0;
+                    let x = 0;
+                    let vy = 3 + Math.random() * 3;
+                    let vx = (Math.random() - 0.5) * 5;
+
+                    function animate() {
+                        y += vy;
+                        x += vx;
+                        conf.style.transform = `translate(${x}px, ${y}px) rotate(${y}deg)`;
+                        if (y < window.innerHeight + 50) requestAnimationFrame(animate);
+                        else conf.remove();
+                    }
+                    animate();
+                }
+            }
+
+            micBtn.addEventListener("click", setupMic);
+            document.querySelectorAll(".inv-item")[0].classList.add("selected");
+        });
+    </script>
+</body>
+</html>
